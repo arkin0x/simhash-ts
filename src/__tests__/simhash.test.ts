@@ -2,6 +2,71 @@ import { describe, test, expect } from '@jest/globals'
 import { simhash, hammingDistance } from '../simhash'
 
 describe('simhash', () => {
+  test('explores how word-level changes affect simhash', () => {
+    const baseText = 'the quick brown fox jumps over the lazy dog'.repeat(8);
+    const results = [];
+    
+    // Test cases with increasing levels of word changes
+    const testCases = [
+      {
+        desc: '1 word changed',
+        text: baseText.replace('fox', 'cat')
+      },
+      {
+        desc: '2 words changed',
+        text: baseText.replace('fox', 'cat').replace('dog', 'rabbit')
+      },
+      {
+        desc: '4 words changed',
+        text: baseText.replace('fox', 'cat')
+                     .replace('dog', 'rabbit')
+                     .replace('quick', 'slow')
+                     .replace('lazy', 'active')
+      },
+      {
+        desc: '8 words changed (different words each time)',
+        text: 'a quick red fox runs past the busy cat'.repeat(8)
+      }
+    ];
+    
+    for (const testCase of testCases) {
+      const hash1 = simhash(baseText);
+      const hash2 = simhash(testCase.text);
+      const distance = hammingDistance(hash1.bin, hash2.bin);
+      
+      // Calculate what percentage of words were changed
+      const baseWords = baseText.split(' ').length;
+      const diffWords = baseText.split(' ')
+        .filter((w, i) => w !== testCase.text.split(' ')[i])
+        .length;
+      const diffPercent = (diffWords / baseWords * 100).toFixed(2);
+      
+      const result = {
+        desc: testCase.desc,
+        diffWords,
+        diffPercent,
+        distance,
+        hashesEqual: hash1.hex === hash2.hex
+      };
+      results.push(result);
+      
+      process.stdout.write(`\n${testCase.desc} (${diffPercent}% words different):\n`);
+      process.stdout.write(`Base text preview: ${baseText.slice(0, 50)}...\n`);
+      process.stdout.write(`Modified text preview: ${testCase.text.slice(0, 50)}...\n`);
+      process.stdout.write(`Hash 1: ${hash1.hex}\n`);
+      process.stdout.write(`Hash 2: ${hash2.hex}\n`);
+      process.stdout.write(`Hamming distance: ${distance}\n`);
+    }
+    
+    // Find smallest change that caused hash difference
+    const firstDiff = results.find(r => !r.hashesEqual);
+    if (firstDiff) {
+      process.stdout.write(`\nSmallest change that caused hash difference: ${firstDiff.desc} (${firstDiff.diffPercent}% words)\n`);
+    }
+    
+    // We expect word-level changes to affect the hash
+    expect(results.some(r => !r.hashesEqual)).toBe(true);
+  });
   test('generates consistent hashes for identical inputs', () => {
     const text = 'The quick brown fox jumps over the lazy dog'
     const hash1 = simhash(text)
