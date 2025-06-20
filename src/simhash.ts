@@ -15,7 +15,9 @@ import { bytesToHex } from '@noble/hashes/utils'
 export function simhash(text: string) {
   const features: string[] = extractFeatures(text)
 
-  const featureHashes: Uint8Array[] = features.map((v) => sha256(v))
+  // Convert string to Uint8Array for hashing
+  const encoder = new TextEncoder()
+  const featureHashes: Uint8Array[] = features.map((v) => sha256(encoder.encode(v)))
 
   const BITLENGTH = 256
   const BYTELENGTH = BITLENGTH / 8
