@@ -1,0 +1,25 @@
+{
+  "topNeighbors": 5,
+  "texts": [
+    {
+      "id": "article-original",
+      "text": "The night market opened at dusk under red lanterns, and every vendor called out prices in a different rhythm. I walked the narrow path between tea stalls and repair benches, collecting stories as much as food. A mechanic with silver gloves said he could rebuild any drone if given enough time and silence. A bookseller traded me a thin atlas for a promise: return when I had mapped one road that did not yet exist."
+    },
+    {
+      "id": "article-light-edit",
+      "text": "The night market opened at dusk beneath red lanterns, and each vendor called out prices in a different rhythm. I walked the narrow lane between tea stalls and repair benches, collecting stories as much as food. A mechanic with silver gloves said he could rebuild any drone if given enough time and quiet. A bookseller traded me a thin atlas for one promise: return when I had mapped one road that did not yet exist."
+    },
+    {
+      "id": "article-padding",
+      "text": "The night market opened at dusk under red lanterns, and every vendor called out prices in a different rhythm. I walked the narrow path between tea stalls and repair benches, collecting stories as much as food. A mechanic with silver gloves said he could rebuild any drone if given enough time and silence. A bookseller traded me a thin atlas for a promise: return when I had mapped one road that did not yet exist. Breaking update subscribe now daily bonus credits click here to follow the latest signal and trending relay bulletin. Breaking update subscribe now daily bonus credits click here to follow the latest signal and trending relay bulletin."
+    },
+    {
+      "id": "article-paraphrase",
+      "text": "At sunset the market came alive beneath crimson lights while sellers announced prices in overlapping cadences. I moved through cramped walkways lined with tea counters and repair tables, gathering stories as eagerly as meals. One technician in metallic gloves claimed he could restore any drone with enough quiet and patience. A used-book merchant gave me a slim map book after I agreed to return once I charted a route nobody had recorded before."
+    },
+    {
+      "id": "article-unrelated",
+      "text": "Orbital weather arrays recalibrated at noon after a week of magnetosphere turbulence. Engineers replaced two damaged sensor packs and rerouted power through a backup lattice to stabilize data collection. The operations log notes a temporary bandwidth loss during the handoff, but no permanent gaps in telemetry. Forecast quality should improve once the northern relay exits maintenance mode tomorrow."
+    }
+  ]
+}

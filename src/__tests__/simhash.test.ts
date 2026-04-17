@@ -1,5 +1,5 @@
 import { describe, test, expect } from '@jest/globals'
-import { simhash, hammingDistance } from '../simhash'
+import { simhash, simhashHardened, simhashEquality, hammingDistance } from '../simhash'
 
 describe('simhash', () => {
   test('explores how word-level changes affect simhash', () => {
@@ -151,6 +151,98 @@ describe('simhash', () => {
 
     expect(hash1.hex).toBe(hash2.hex)
     expect(hammingDistance(hash1.bin, hash2.bin)).toBe(0)
+  })
+})
+
+describe('simhashHardened', () => {
+  test('normalizes canonical unicode equivalents to the same hash', () => {
+    const composed = 'café'
+    const decomposed = 'cafe\u0301'
+    const hash1 = simhashHardened(composed)
+    const hash2 = simhashHardened(decomposed)
+
+    expect(hash1.hex).toBe(hash2.hex)
+    expect(hammingDistance(hash1.bin, hash2.bin)).toBe(0)
+  })
+
+  test('normalizes case and punctuation noise', () => {
+    const text1 = 'Hello, WORLD! This is Nostr.'
+    const text2 = 'hello world this is nostr'
+    const hash1 = simhashHardened(text1)
+    const hash2 = simhashHardened(text2)
+
+    expect(hash1.hex).toBe(hash2.hex)
+  })
+
+  test('does not collapse short inputs into the same hash', () => {
+    const emptyHash = simhashHardened('')
+    const aHash = simhashHardened('a')
+    const bHash = simhashHardened('b')
+
+    expect(emptyHash.hex).not.toBe(aHash.hex)
+    expect(aHash.hex).not.toBe(bHash.hex)
+    expect(emptyHash.bin.length).toBe(32)
+  })
+
+  test('is less sensitive to appended boilerplate than legacy simhash', () => {
+    const base = (
+      'The quick brown fox jumps over the lazy dog while the curious raven watches from above. '
+    ).repeat(20)
+    const padded = `${base} ${(
+      'Subscribe now click here breaking update sponsored content repeat repeat repeat. '
+    ).repeat(20)}`
+
+    const legacyDistance = hammingDistance(simhash(base).bin, simhash(padded).bin)
+    const hardenedDistance = hammingDistance(simhashHardened(base).bin, simhashHardened(padded).bin)
+
+    expect(hardenedDistance).toBeLessThan(legacyDistance)
+  })
+})
+
+describe('simhashEquality', () => {
+  const articleOriginal =
+    'The night market opened at dusk under red lanterns, and every vendor called out prices in a different rhythm. ' +
+    'I walked the narrow path between tea stalls and repair benches, collecting stories as much as food. ' +
+    'A mechanic with silver gloves said he could rebuild any drone if given enough time and silence. ' +
+    'A bookseller traded me a thin atlas for a promise: return when I had mapped one road that did not yet exist.'
+
+  const articleLightEdit =
+    'The night market opened at dusk beneath red lanterns, and each vendor called out prices in a different rhythm. ' +
+    'I walked the narrow lane between tea stalls and repair benches, collecting stories as much as food. ' +
+    'A mechanic with silver gloves said he could rebuild any drone if given enough time and quiet. ' +
+    'A bookseller traded me a thin atlas for one promise: return when I had mapped one road that did not yet exist.'
+
+  const articlePadding =
+    `${articleOriginal} ` +
+    'Breaking update subscribe now daily bonus credits click here to follow the latest signal and trending relay bulletin. ' +
+    'Breaking update subscribe now daily bonus credits click here to follow the latest signal and trending relay bulletin.'
+
+  const articleUnrelated =
+    'Orbital weather arrays recalibrated at noon after a week of magnetosphere turbulence. ' +
+    'Engineers replaced two damaged sensor packs and rerouted power through a backup lattice to stabilize data collection. ' +
+    'The operations log notes a temporary bandwidth loss during the handoff, but no permanent gaps in telemetry.'
+
+  test('maps light edits and boilerplate padding to the same exact hash', () => {
+    const base = simhashEquality(articleOriginal)
+    const edited = simhashEquality(articleLightEdit)
+    const padded = simhashEquality(articlePadding)
+
+    expect(base.hex).toBe(edited.hex)
+    expect(base.hex).toBe(padded.hex)
+  })
+
+  test('keeps unrelated content on a different exact hash', () => {
+    const base = simhashEquality(articleOriginal)
+    const unrelated = simhashEquality(articleUnrelated)
+
+    expect(base.hex).not.toBe(unrelated.hex)
+  })
+
+  test('normalizes unicode/case/punctuation for exact equality', () => {
+    const a = simhashEquality('CAFÉ -- Hello, WORLD!!!')
+    const b = simhashEquality('cafe hello world')
+
+    expect(a.hex).toBe(b.hex)
   })
 })
 
