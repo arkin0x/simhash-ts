@@ -49,9 +49,9 @@ export const HARDENED_SIMHASH_DEFAULTS: HardenedSimhashParams = {
 export const EQUALITY_SIMHASH_DEFAULTS: EqualitySimhashParams = {
   bitLength: 256,
   shingleSize: 1,
-  bucketCount: 3,
+  bucketCount: 2,
   keptHexCharsPerBucket: 3,
-  minTokenLength: 3,
+  minTokenLength: 4,
 }
 
 const EQUALITY_STOPWORDS = new Set([
@@ -240,7 +240,7 @@ export function simhashEquality(
   const tokens = tokenizeForEquality(text, cfg.minTokenLength)
 
   if (tokens.length === 0) {
-    return hashStringToSimhashResult(`simhash-equality-v1|empty|${canonicalizeTextForEquality(text)}`, cfg.bitLength)
+    return hashStringToSimhashResult(`simhash-equality-v2|empty|${canonicalizeTextForEquality(text)}`, cfg.bitLength)
   }
 
   const shingles = buildEqualityShingles(tokens, cfg.shingleSize)
@@ -264,7 +264,7 @@ export function simhashEquality(
     .join('|')
 
   return hashStringToSimhashResult(
-    `simhash-equality-v1|n=${cfg.shingleSize}|b=${cfg.bucketCount}|k=${cfg.keptHexCharsPerBucket}|${descriptor}`,
+    `simhash-equality-v2|n=${cfg.shingleSize}|b=${cfg.bucketCount}|k=${cfg.keptHexCharsPerBucket}|m=${cfg.minTokenLength}|${descriptor}`,
     cfg.bitLength
   )
 }
