@@ -6,12 +6,11 @@
   "types": "dist/simhash.d.ts",
   "files": [
     "dist",
-    "src",
     "LICENSE",
     "README.md"
   ],
   "scripts": {
-    "build": "tsc",
+    "build": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true})\" && tsc",
     "prepare": "npm run build",
     "test": "jest --no-watchman --runInBand",
     "test:watch": "jest --watch",
@@ -30,7 +29,7 @@
     "hash"
   ],
   "author": "npub1arkn0xxxll4llgy9qxkrncn3vc4l69s0dz8ef3zadykcwe7ax3dqrrh43w",
-  "license": "SEE LICENSE IN LICENSE",
+  "license": "MIT",
   "bugs": {
     "url": "https://github.com/arkin0x/simhash-ts/issues"
   },
