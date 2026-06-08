@@ -1,5 +1,5 @@
 import { describe, test, expect } from '@jest/globals'
-import { simhash, simhashHardened, simhashEquality, hammingDistance } from '../simhash'
+import { simhash, simhashHardened, simhashEquality, simhashEqualityV3, hammingDistance } from '../simhash'
 
 describe('simhash', () => {
   test('explores how word-level changes affect simhash', () => {
@@ -243,6 +243,80 @@ describe('simhashEquality', () => {
     const b = simhashEquality('cafe hello world')
 
     expect(a.hex).toBe(b.hex)
+  })
+})
+
+describe('simhashEqualityV3', () => {
+  const articleOriginal =
+    'The night market opened at dusk under red lanterns, and every vendor called out prices in a different rhythm. ' +
+    'I walked the narrow path between tea stalls and repair benches, collecting stories as much as food. ' +
+    'A mechanic with silver gloves said he could rebuild any drone if given enough time and silence. ' +
+    'A bookseller traded me a thin atlas for a promise: return when I had mapped one road that did not yet exist.'
+
+  const articleUnrelated =
+    'Orbital weather arrays recalibrated at noon after a week of magnetosphere turbulence. ' +
+    'Engineers replaced two damaged sensor packs and rerouted power through a backup lattice to stabilize data collection. ' +
+    'The operations log notes a temporary bandwidth loss during the handoff, but no permanent gaps in telemetry.'
+
+  // A longer, vocabulary-rich article; with 8 buckets v3 needs enough distinct
+  // tokens for the bucketed minimums to be stable under small edits.
+  const longArticle =
+    'Researchers studying coastal erosion published a detailed survey describing how shifting sediment patterns reshape estuaries over decades. ' +
+    'Their fieldwork combined satellite imagery with sediment cores collected from a dozen river mouths along the northern shoreline. ' +
+    'The team argued that traditional models underestimate the influence of seasonal storms, which redistribute sand far more aggressively than gradual tidal action. ' +
+    'By tracking individual grains tagged with luminescent markers, they reconstructed transport pathways that previous studies had missed entirely. ' +
+    'One surprising finding involved a submerged ridge that funnels currents toward a fragile marsh, accelerating its retreat. ' +
+    'The authors recommend rebuilding wetland buffers and restoring oyster reefs to dissipate wave energy before it reaches vulnerable banks. ' +
+    'Local fishermen, interviewed throughout the project, confirmed that familiar channels have migrated noticeably within a single generation.'
+
+  test('is deterministic for identical inputs', () => {
+    expect(simhashEqualityV3(articleOriginal).hex).toBe(simhashEqualityV3(articleOriginal).hex)
+  })
+
+  test('retains edit durability on long articles (most single-word edits preserve the hash)', () => {
+    // v3 (8 buckets) is more specific than v2 and therefore less edit-durable on
+    // short text, but on a vocabulary-rich article the majority of single-word
+    // deletions still map to the same exact hash. This is the FP/durability dial
+    // documented in kb-private ADR-005.
+    const baseHex = simhashEqualityV3(longArticle).hex
+    const words = longArticle.split(/\s+/)
+    let preserved = 0
+    let total = 0
+    for (let i = 0; i < words.length; i += 2) {
+      const variant = words.slice(0, i).concat(words.slice(i + 1)).join(' ')
+      if (simhashEqualityV3(variant).hex === baseHex) preserved++
+      total++
+    }
+    expect(preserved / total).toBeGreaterThan(0.6)
+  })
+
+  test('keeps unrelated content on a different exact hash', () => {
+    expect(simhashEqualityV3(articleOriginal).hex).not.toBe(simhashEqualityV3(articleUnrelated).hex)
+  })
+
+  test('normalizes unicode/case/punctuation for exact equality', () => {
+    expect(simhashEqualityV3('CAFÉ -- Hello, WORLD!!!').hex).toBe(simhashEqualityV3('cafe hello world').hex)
+  })
+
+  test('is not bit-for-bit compatible with v2 (distinct version)', () => {
+    expect(simhashEqualityV3(articleOriginal).hex).not.toBe(simhashEquality(articleOriginal).hex)
+  })
+
+  test('produces a 256-bit result', () => {
+    const h = simhashEqualityV3(articleOriginal)
+    expect(h.bin.length).toBe(32)
+    expect(h.hex).toHaveLength(64)
+  })
+
+  test('handles degenerate input via the empty fallback', () => {
+    // punctuation-only inputs canonicalize to "" and intentionally share the
+    // empty-path hash; a single short token is distinct from that empty hash.
+    const punctA = simhashEqualityV3('!!! ')
+    const punctB = simhashEqualityV3('   ###')
+    const oneToken = simhashEqualityV3('gm')
+    expect(punctA.bin.length).toBe(32)
+    expect(punctA.hex).toBe(punctB.hex)
+    expect(oneToken.hex).not.toBe(punctA.hex)
   })
 })
 

@@ -54,6 +54,24 @@ export const EQUALITY_SIMHASH_DEFAULTS: EqualitySimhashParams = {
   minTokenLength: 4,
 }
 
+// simhash-equality-v3: collision-hardened variant of v2. Two changes fix the
+// long-content false-positive collapse documented in kb-private ADR-005:
+//   1. bucketCount 2 -> 8: forces unrelated documents to agree on the minimum
+//      token in all 8 buckets to collide (an AND across buckets), which crushes
+//      the common-word minimum-agreement that dominated v2 false positives.
+//   2. low-order hex selection (see simhashEqualityV3): the minimum of many
+//      hashes still concentrates its high-order bits toward zero, so v2's
+//      first-k hex chars carried almost no entropy on long text. v3 keeps the
+//      LAST k hex chars, which stay uniform regardless of token count.
+// v2 is left untouched per the never-modify-only-add versioning policy.
+export const EQUALITY_SIMHASH_V3_DEFAULTS: EqualitySimhashParams = {
+  bitLength: 256,
+  shingleSize: 1,
+  bucketCount: 8,
+  keptHexCharsPerBucket: 3,
+  minTokenLength: 4,
+}
+
 const EQUALITY_STOPWORDS = new Set([
   'the',
   'a',
@@ -265,6 +283,55 @@ export function simhashEquality(
 
   return hashStringToSimhashResult(
     `simhash-equality-v2|n=${cfg.shingleSize}|b=${cfg.bucketCount}|k=${cfg.keptHexCharsPerBucket}|m=${cfg.minTokenLength}|${descriptor}`,
+    cfg.bitLength
+  )
+}
+
+/**
+ * simhash-equality-v3: collision-hardened equality fingerprint.
+ *
+ * Identical pipeline to {@link simhashEquality} (same canonicalization,
+ * stemming, stopword filtering, shingling, and bucketed-minimum MinHash sketch)
+ * with two deliberate differences, both defined by this version:
+ *   - 8 buckets instead of 2 (see {@link EQUALITY_SIMHASH_V3_DEFAULTS});
+ *   - each bucket keeps the LAST `keptHexCharsPerBucket` hex chars of its
+ *     minimum hash, not the first.
+ * See kb-private ADR-005 for the empirical justification. v3 is never bit-for-bit
+ * compatible with v2; the version string in the descriptor reflects that.
+ */
+export function simhashEqualityV3(
+  text: string,
+  params: Partial<EqualitySimhashParams> = {}
+): SimhashResult {
+  const cfg: EqualitySimhashParams = { ...EQUALITY_SIMHASH_V3_DEFAULTS, ...params }
+  const tokens = tokenizeForEquality(text, cfg.minTokenLength)
+
+  if (tokens.length === 0) {
+    return hashStringToSimhashResult(`simhash-equality-v3|empty|${canonicalizeTextForEquality(text)}`, cfg.bitLength)
+  }
+
+  const shingles = buildEqualityShingles(tokens, cfg.shingleSize)
+  const encoder = new TextEncoder()
+  const bucketMins: Array<string | null> = Array(cfg.bucketCount).fill(null)
+
+  for (const shingle of shingles) {
+    const hashBytes = sha256(encoder.encode(`eqs:${shingle}`))
+    const hashHex = bytesToHex(hashBytes)
+    const bucket = hashBytes[0] % cfg.bucketCount
+    const current = bucketMins[bucket]
+    if (current === null || hashHex < current) {
+      bucketMins[bucket] = hashHex
+    }
+  }
+
+  const descriptor = bucketMins
+    .map((hashHex, index) =>
+      hashHex === null ? `b${index}:x` : `b${index}:${hashHex.slice(-cfg.keptHexCharsPerBucket)}`
+    )
+    .join('|')
+
+  return hashStringToSimhashResult(
+    `simhash-equality-v3|n=${cfg.shingleSize}|b=${cfg.bucketCount}|k=${cfg.keptHexCharsPerBucket}|m=${cfg.minTokenLength}|${descriptor}`,
     cfg.bitLength
   )
 }
