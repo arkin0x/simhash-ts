@@ -148,6 +148,44 @@
           "text": "Intercontinental rail maintenance reports from the northern corridor focused on corrosion control, axle temperature drift, and brake-line telemetry repair scheduling across winter routes. Dispatch teams compared field scans from tunnel segments where humidity remained above target thresholds, then prioritized replacement batches for insulated coupling hardware and aging sensor enclosures. Procurement officers noted shipping delays for ceramic bearings, so engineering revised inspection cadence and temporary service caps to preserve safety margins until inventory normalized. Training bulletins instructed operators to record wheel vibration signatures at every major stop, flag anomalies in the central incident queue, and cross-reference findings with meteorological feeds before assigning overnight departures. By quarter end, the corridor documented improved on-time performance, reduced emergency stoppages, and lower unscheduled maintenance costs, largely due to tighter diagnostics workflows and clearer escalation playbooks."
         }
       ]
+    },
+    {
+      "id": "false-positive-controls",
+      "description": "Mutually unrelated texts on different topics. They share no meaningful content, so a correct equality fingerprint MUST give each a distinct hash. No expectedEqualityPairs: any collision here is a false positive. This family guards against the long-content false-positive defect fixed in minhash-equality-v1 (see kb-private ADR-005); under the legacy 2-bucket simhash-equality-v2 several of these collided.",
+      "texts": [
+        {
+          "id": "fp-lightning",
+          "text": "The Lightning Network developer argued that channel liquidity, not block space, is the real bottleneck for retail bitcoin payments. He demonstrated a routing simulation in which splitting a single payment across several paths cut the failure rate dramatically, and called on wallet authors to adopt multipath sending by default before the next wave of merchant adoption arrives."
+        },
+        {
+          "id": "fp-kennedy",
+          "text": "A federal judge in the capital blocked the administration from renaming the national performing arts center, ruling that the executive lacked the statutory authority to strip the institution of a name set by Congress. Lawyers for the cultural board welcomed the decision while opponents promised an immediate appeal to the circuit court."
+        },
+        {
+          "id": "fp-hantavirus",
+          "text": "Health officials confirmed a small cluster of hantavirus cases on a cargo vessel docked near the island port, isolating the crew and tracing rodent activity in the hold. The agency stressed that person to person transmission is not a feature of this virus and urged dock workers to follow standard cleaning protocols when handling stored grain."
+        },
+        {
+          "id": "fp-risotto",
+          "text": "For a mushroom risotto that actually tastes of the forest, toast the rice in butter until it turns translucent, then add warm stock one ladle at a time, stirring patiently so the starch releases and the grains stay separate. Finish off the heat with cold butter and a generous handful of grated cheese for a glossy, loose texture."
+        },
+        {
+          "id": "fp-derby",
+          "text": "The local derby ended in a tense draw after the visitors equalised deep into stoppage time, silencing a home crowd that had spent an hour celebrating an early header. The manager praised his defenders for absorbing relentless pressure but admitted that wasteful finishing in the second half had cost his side two crucial points in the title race."
+        },
+        {
+          "id": "fp-glacier",
+          "text": "Glaciologists tracking the retreat of an alpine ice field reported that meltwater is now carving channels far beneath the surface, accelerating the collapse of sections once thought stable. Their instruments recorded the loss of several metres of thickness in a single warm season, a pace the team described as well outside the range their older models had predicted."
+        },
+        {
+          "id": "fp-album",
+          "text": "On her third record the songwriter trades the bright synths of her earlier work for brushed drums and upright bass, letting her voice sit close and unhurried in the mix. The lyrics circle around leaving a small town without bitterness, and the arrangements give each story room to breathe rather than rushing toward a chorus."
+        },
+        {
+          "id": "fp-tomatoes",
+          "text": "If your tomato seedlings are growing tall and pale, they are reaching for light they cannot find, so move the trays closer to the window or lower your grow lamp. Brushing the stems gently with your hand each day mimics wind and encourages thicker, sturdier growth before you harden the plants off for the open garden."
+        }
+      ]
     }
   ]
 }

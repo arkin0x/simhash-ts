@@ -54,6 +54,28 @@ export const EQUALITY_SIMHASH_DEFAULTS: EqualitySimhashParams = {
   minTokenLength: 4,
 }
 
+// minhash-equality-v1: the correctly named, collision-hardened equality
+// fingerprint. NOTE ON NAMING: despite living in `simhash-ts`, this is NOT
+// Charikar SimHash. It is b-bit one-permutation MinHash (Broder; one-permutation
+// per Li/Owen/Zhang; b-bit per Li/Konig) used as an exact-equality fingerprint.
+// It supersedes the misnamed `simhashEquality` (wire id `simhash-equality-v2`),
+// which is frozen as legacy. Two changes fix the long-content false-positive
+// collapse documented in kb-private ADR-005:
+//   1. bucketCount 2 -> 8: forces unrelated documents to agree on the minimum
+//      token in all 8 buckets to collide (an AND across buckets), which crushes
+//      the common-word minimum-agreement that dominated the legacy false positives.
+//   2. low-order hex selection (see minhashEquality): the minimum of many hashes
+//      concentrates its high-order bits toward zero, so keeping the first k hex
+//      chars carried almost no entropy on long text. Keeping the LAST k hex chars
+//      stays uniform regardless of token count (this is the b-bit minwise rule).
+export const MINHASH_EQUALITY_DEFAULTS: EqualitySimhashParams = {
+  bitLength: 256,
+  shingleSize: 1,
+  bucketCount: 8,
+  keptHexCharsPerBucket: 3,
+  minTokenLength: 4,
+}
+
 const EQUALITY_STOPWORDS = new Set([
   'the',
   'a',
@@ -265,6 +287,63 @@ export function simhashEquality(
 
   return hashStringToSimhashResult(
     `simhash-equality-v2|n=${cfg.shingleSize}|b=${cfg.bucketCount}|k=${cfg.keptHexCharsPerBucket}|m=${cfg.minTokenLength}|${descriptor}`,
+    cfg.bitLength
+  )
+}
+
+/**
+ * minhash-equality-v1: collision-hardened, exact-equality content fingerprint.
+ *
+ * This is b-bit one-permutation MinHash (NOT Charikar SimHash, despite the
+ * package name): the text is reduced to a set of stemmed tokens, hashed into
+ * `bucketCount` bins, and each bin keeps the minimum hash; near-identical texts
+ * elect the same per-bin winners and so collapse to the same fingerprint, which
+ * an exact relay `#X` query can discover.
+ *
+ * It supersedes the misnamed {@link simhashEquality} (wire id
+ * `simhash-equality-v2`), which is frozen as legacy. Same pipeline, two changes
+ * (see {@link MINHASH_EQUALITY_DEFAULTS}):
+ *   - 8 bins instead of 2, so unrelated documents must agree on all 8 winners to
+ *     collide (an AND that defeats common-word minimum-agreement);
+ *   - keep the LAST `keptHexCharsPerBucket` hex chars of each minimum, not the
+ *     first (the b-bit minwise rule: low-order bits stay uniform, high-order bits
+ *     of a minimum concentrate toward zero).
+ * See kb-private ADR-005 for the empirical justification. Not bit-for-bit
+ * compatible with the legacy `simhash-equality-v2`; the descriptor reflects that.
+ */
+export function minhashEquality(
+  text: string,
+  params: Partial<EqualitySimhashParams> = {}
+): SimhashResult {
+  const cfg: EqualitySimhashParams = { ...MINHASH_EQUALITY_DEFAULTS, ...params }
+  const tokens = tokenizeForEquality(text, cfg.minTokenLength)
+
+  if (tokens.length === 0) {
+    return hashStringToSimhashResult(`minhash-equality-v1|empty|${canonicalizeTextForEquality(text)}`, cfg.bitLength)
+  }
+
+  const shingles = buildEqualityShingles(tokens, cfg.shingleSize)
+  const encoder = new TextEncoder()
+  const bucketMins: Array<string | null> = Array(cfg.bucketCount).fill(null)
+
+  for (const shingle of shingles) {
+    const hashBytes = sha256(encoder.encode(`eqs:${shingle}`))
+    const hashHex = bytesToHex(hashBytes)
+    const bucket = hashBytes[0] % cfg.bucketCount
+    const current = bucketMins[bucket]
+    if (current === null || hashHex < current) {
+      bucketMins[bucket] = hashHex
+    }
+  }
+
+  const descriptor = bucketMins
+    .map((hashHex, index) =>
+      hashHex === null ? `b${index}:x` : `b${index}:${hashHex.slice(-cfg.keptHexCharsPerBucket)}`
+    )
+    .join('|')
+
+  return hashStringToSimhashResult(
+    `minhash-equality-v1|n=${cfg.shingleSize}|b=${cfg.bucketCount}|k=${cfg.keptHexCharsPerBucket}|m=${cfg.minTokenLength}|${descriptor}`,
     cfg.bitLength
   )
 }

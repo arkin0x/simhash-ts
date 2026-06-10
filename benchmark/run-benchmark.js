@@ -4,10 +4,10 @@ const path = require('node:path')
 const {
   simhash,
   simhashHardened,
-  simhashEquality,
+  minhashEquality,
   hammingDistance,
   HARDENED_SIMHASH_DEFAULTS,
-  EQUALITY_SIMHASH_DEFAULTS,
+  MINHASH_EQUALITY_DEFAULTS,
 } = require('../dist/simhash.js')
 
 const DEFAULT_TOP_NEIGHBORS = 5
@@ -244,7 +244,7 @@ function computeMetrics(texts) {
   const records = texts.map((entry) => {
     const legacy = simhash(entry.text)
     const hardened = simhashHardened(entry.text)
-    const equality = simhashEquality(entry.text)
+    const equality = minhashEquality(entry.text)
     return {
       ...entry,
       legacy,
@@ -507,7 +507,7 @@ function printBenchmarkReport(
   console.log(`familyCount: ${families.length}`)
   console.log(`topNeighbors: ${topNeighbors}`)
   console.log(`hardenedDefaults: ${JSON.stringify(HARDENED_SIMHASH_DEFAULTS)}`)
-  console.log(`equalityDefaults: ${JSON.stringify(EQUALITY_SIMHASH_DEFAULTS)}`)
+  console.log(`equalityDefaults: ${JSON.stringify(MINHASH_EQUALITY_DEFAULTS)}`)
   console.log(formatDistanceSummary('legacyDistanceSummary', legacyAll))
   console.log(formatDistanceSummary('hardenedDistanceSummary', hardenedAll))
   console.log(`legacyExactPairMatches: ${legacyExactPairCount}`)

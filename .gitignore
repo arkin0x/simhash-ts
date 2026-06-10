@@ -82,3 +82,5 @@ public
 
 # Stores VSCode versions used for testing VSCode extensions
 .vscode-test
+# research corpora (pulled live, non-deterministic)
+research/*.jsonl
