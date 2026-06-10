@@ -1,11 +1,12 @@
 {
   "name": "simhash-ts",
-  "version": "0.1.0",
-  "description": "A TypeScript implementation of Simhash algorithm for near-duplicate detection",
+  "version": "0.2.0",
+  "description": "TypeScript locality-sensitive hashing: Charikar SimHash plus MinHash-based equality fingerprints for near-duplicate detection and exact-match discovery",
   "main": "dist/simhash.js",
   "types": "dist/simhash.d.ts",
   "files": [
     "dist",
+    "vectors",
     "LICENSE",
     "README.md"
   ],
@@ -23,9 +24,13 @@
   },
   "keywords": [
     "simhash",
+    "minhash",
+    "locality-sensitive-hashing",
+    "jaccard",
     "typescript",
     "similarity",
     "near-duplicate",
+    "nostr",
     "hash"
   ],
   "author": "npub1arkn0xxxll4llgy9qxkrncn3vc4l69s0dz8ef3zadykcwe7ax3dqrrh43w",
