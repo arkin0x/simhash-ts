@@ -54,17 +54,21 @@ export const EQUALITY_SIMHASH_DEFAULTS: EqualitySimhashParams = {
   minTokenLength: 4,
 }
 
-// simhash-equality-v3: collision-hardened variant of v2. Two changes fix the
-// long-content false-positive collapse documented in kb-private ADR-005:
+// minhash-equality-v1: the correctly named, collision-hardened equality
+// fingerprint. NOTE ON NAMING: despite living in `simhash-ts`, this is NOT
+// Charikar SimHash. It is b-bit one-permutation MinHash (Broder; one-permutation
+// per Li/Owen/Zhang; b-bit per Li/Konig) used as an exact-equality fingerprint.
+// It supersedes the misnamed `simhashEquality` (wire id `simhash-equality-v2`),
+// which is frozen as legacy. Two changes fix the long-content false-positive
+// collapse documented in kb-private ADR-005:
 //   1. bucketCount 2 -> 8: forces unrelated documents to agree on the minimum
 //      token in all 8 buckets to collide (an AND across buckets), which crushes
-//      the common-word minimum-agreement that dominated v2 false positives.
-//   2. low-order hex selection (see simhashEqualityV3): the minimum of many
-//      hashes still concentrates its high-order bits toward zero, so v2's
-//      first-k hex chars carried almost no entropy on long text. v3 keeps the
-//      LAST k hex chars, which stay uniform regardless of token count.
-// v2 is left untouched per the never-modify-only-add versioning policy.
-export const EQUALITY_SIMHASH_V3_DEFAULTS: EqualitySimhashParams = {
+//      the common-word minimum-agreement that dominated the legacy false positives.
+//   2. low-order hex selection (see minhashEquality): the minimum of many hashes
+//      concentrates its high-order bits toward zero, so keeping the first k hex
+//      chars carried almost no entropy on long text. Keeping the LAST k hex chars
+//      stays uniform regardless of token count (this is the b-bit minwise rule).
+export const MINHASH_EQUALITY_DEFAULTS: EqualitySimhashParams = {
   bitLength: 256,
   shingleSize: 1,
   bucketCount: 8,
@@ -288,26 +292,34 @@ export function simhashEquality(
 }
 
 /**
- * simhash-equality-v3: collision-hardened equality fingerprint.
+ * minhash-equality-v1: collision-hardened, exact-equality content fingerprint.
  *
- * Identical pipeline to {@link simhashEquality} (same canonicalization,
- * stemming, stopword filtering, shingling, and bucketed-minimum MinHash sketch)
- * with two deliberate differences, both defined by this version:
- *   - 8 buckets instead of 2 (see {@link EQUALITY_SIMHASH_V3_DEFAULTS});
- *   - each bucket keeps the LAST `keptHexCharsPerBucket` hex chars of its
- *     minimum hash, not the first.
- * See kb-private ADR-005 for the empirical justification. v3 is never bit-for-bit
- * compatible with v2; the version string in the descriptor reflects that.
+ * This is b-bit one-permutation MinHash (NOT Charikar SimHash, despite the
+ * package name): the text is reduced to a set of stemmed tokens, hashed into
+ * `bucketCount` bins, and each bin keeps the minimum hash; near-identical texts
+ * elect the same per-bin winners and so collapse to the same fingerprint, which
+ * an exact relay `#X` query can discover.
+ *
+ * It supersedes the misnamed {@link simhashEquality} (wire id
+ * `simhash-equality-v2`), which is frozen as legacy. Same pipeline, two changes
+ * (see {@link MINHASH_EQUALITY_DEFAULTS}):
+ *   - 8 bins instead of 2, so unrelated documents must agree on all 8 winners to
+ *     collide (an AND that defeats common-word minimum-agreement);
+ *   - keep the LAST `keptHexCharsPerBucket` hex chars of each minimum, not the
+ *     first (the b-bit minwise rule: low-order bits stay uniform, high-order bits
+ *     of a minimum concentrate toward zero).
+ * See kb-private ADR-005 for the empirical justification. Not bit-for-bit
+ * compatible with the legacy `simhash-equality-v2`; the descriptor reflects that.
  */
-export function simhashEqualityV3(
+export function minhashEquality(
   text: string,
   params: Partial<EqualitySimhashParams> = {}
 ): SimhashResult {
-  const cfg: EqualitySimhashParams = { ...EQUALITY_SIMHASH_V3_DEFAULTS, ...params }
+  const cfg: EqualitySimhashParams = { ...MINHASH_EQUALITY_DEFAULTS, ...params }
   const tokens = tokenizeForEquality(text, cfg.minTokenLength)
 
   if (tokens.length === 0) {
-    return hashStringToSimhashResult(`simhash-equality-v3|empty|${canonicalizeTextForEquality(text)}`, cfg.bitLength)
+    return hashStringToSimhashResult(`minhash-equality-v1|empty|${canonicalizeTextForEquality(text)}`, cfg.bitLength)
   }
 
   const shingles = buildEqualityShingles(tokens, cfg.shingleSize)
@@ -331,7 +343,7 @@ export function simhashEqualityV3(
     .join('|')
 
   return hashStringToSimhashResult(
-    `simhash-equality-v3|n=${cfg.shingleSize}|b=${cfg.bucketCount}|k=${cfg.keptHexCharsPerBucket}|m=${cfg.minTokenLength}|${descriptor}`,
+    `minhash-equality-v1|n=${cfg.shingleSize}|b=${cfg.bucketCount}|k=${cfg.keptHexCharsPerBucket}|m=${cfg.minTokenLength}|${descriptor}`,
     cfg.bitLength
   )
 }
